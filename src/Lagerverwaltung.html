@@ -1,9 +1,151 @@
-<!DOCTYPE html>	
-<html>
-    <head>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lagerplatz LED Ausgabe</title>
+    <style>
+        .fach-container {
+            display: flex;
+            justify-content: flex-start;
+            gap: 5px;
+            flex-wrap: wrap; /* Erlaubt das Umwickeln der Fächer, falls der Platz nicht reicht */
+            margin: 10px 0;
+        }
+        .fach {
+            width: 40px;
+            height: 40px;
+            border-radius: 5px;
+            border: 1px solid #000;
+        }
+        .output-container {
+            margin-top: 20px;
+        }
+        .output-container p {
+            font-size: 16px;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Suche nach LEDs auf einem Lagerplatz</h1>
+    <label for="lagerplatz">Lagerplatz Nummer:</label>
+    <input type="number" id="lagerplatz" placeholder="Lagerplatznummer eingeben" min="1" max="100" value="1" />
+    <button id="sucheButton">Suchen</button>
 
-    </head>
-    <body>
-        
-    </body>
+    <div id="output" class="output-container"></div>
+
+    <script>
+        const farben = [
+            {"name": "Rot", "rgb": "rgb(255, 0, 0)"},
+            {"name": "Blau", "rgb": "rgb(0, 0, 255)"},
+            {"name": "Grün", "rgb": "rgb(0, 255, 0)"},
+            {"name": "Gelb", "rgb": "rgb(255, 255, 0)"},
+            {"name": "Orange", "rgb": "rgb(255, 165, 0)"},
+            {"name": "Lila", "rgb": "rgb(128, 0, 128)"},
+            {"name": "Türkis", "rgb": "rgb(64, 224, 208)"},
+            {"name": "Pink", "rgb": "rgb(255, 105, 180)"},
+            {"name": "Braun", "rgb": "rgb(165, 42, 42)"},
+            {"name": "Grau", "rgb": "rgb(128, 128, 128)"},
+            {"name": "Hellgrün", "rgb": "rgb(144, 238, 144)"},
+            {"name": "Dunkelblau", "rgb": "rgb(0, 0, 139)"},
+            {"name": "Violett", "rgb": "rgb(238, 130, 238)"},
+            {"name": "Hellblau", "rgb": "rgb(173, 216, 230)"},
+            {"name": "Beige", "rgb": "rgb(245, 245, 220)"},
+            {"name": "Dunkelrot", "rgb": "rgb(139, 0, 0)"},
+            {"name": "Hellbraun", "rgb": "rgb(205, 133, 63)"},
+            {"name": "Hellgelb", "rgb": "rgb(255, 255, 102)"},
+            {"name": "Magenta", "rgb": "rgb(255, 0, 255)"},
+            {"name": "Dunkelgrün", "rgb": "rgb(0, 100, 0)"},
+            {"name": "Cyan", "rgb": "rgb(0, 255, 255)"},
+            {"name": "Zinnober", "rgb": "rgb(227, 66, 52)"},
+            {"name": "Mintgrün", "rgb": "rgb(189, 252, 201)"},
+            {"name": "Blaugrün", "rgb": "rgb(0, 128, 128)"},
+            {"name": "Pfirsich", "rgb": "rgb(255, 218, 185)"}
+        ];
+
+        const personen_lagerplaetze = [
+            {"person": 1, "lagerplätze": [1, 15, 19, 20, 31, 38, 48, 60, 66, 70, 85, 99]},
+            {"person": 2, "lagerplätze": [4, 8, 15, 32, 45, 46, 54, 63, 66, 82, 86, 88]},
+            {"person": 3, "lagerplätze": [2, 4, 7, 17, 30, 32, 39, 44, 69, 73, 84, 89, 93]},
+            {"person": 4, "lagerplätze": [2, 10, 14, 34, 36, 37, 46, 49, 58, 72, 73, 80, 84, 87, 91, 93, 95]},
+            {"person": 5, "lagerplätze": [4, 5, 8, 12, 24, 30, 36, 46, 47, 55, 62, 63, 73, 77, 82, 94, 97]},
+            {"person": 6, "lagerplätze": [11, 17, 21, 24, 49, 56, 59, 80]},
+            {"person": 7, "lagerplätze": [11, 21, 23, 36, 43, 48, 52, 61, 62, 76, 77, 90]},
+            {"person": 8, "lagerplätze": [5, 6, 17, 28, 53, 58, 63, 73, 81, 85, 91, 95]},
+            {"person": 9, "lagerplätze": [8, 11, 66, 74, 80]},
+            {"person":10, "lagerplätze": [5, 14, 19, 21, 39, 43, 57, 60, 61, 64, 73, 74, 76, 80, 88]},
+            {"person":11, "lagerplätze": [2, 4, 5, 36, 39, 81, 92]},
+            {"person":12, "lagerplätze": [3, 11, 26, 30, 34, 41, 43, 44, 47, 70, 73, 82, 85, 93]},
+            {"person":13, "lagerplätze": [16, 17, 55, 60, 63, 72]},
+            {"person":14, "lagerplätze": [4, 5, 8, 22, 24, 33, 35, 45, 49, 51, 64, 71, 83]},
+            {"person":15, "lagerplätze": [2, 5, 18, 19, 71, 72, 78, 79, 93]},
+            {"person":16, "lagerplätze": [8, 21, 27, 32, 36, 44, 45, 47, 51, 63, 65, 69, 91, 93, 96]},
+            {"person":17, "lagerplätze": [10, 11, 21, 39, 48, 56, 77]},
+            {"person":18, "lagerplätze": [25, 33, 38, 43, 46, 58, 60, 64, 65, 66, 71, 84, 91, 95]},
+            {"person":19, "lagerplätze": [17, 23, 26, 32, 35, 38, 39, 44, 63, 67, 85, 86, 94, 100]},
+            {"person":20, "lagerplätze": [15, 30, 32, 38, 39, 43, 45, 58, 66, 68, 80, 90, 91, 100]},
+            {"person":21, "lagerplätze": [3, 4, 25, 36, 44, 45, 58, 70, 85, 88, 98]},
+            {"person":22, "lagerplätze": [11, 27, 28, 29, 30, 38, 40, 43, 44, 46, 60, 66, 80, 83, 92, 94, 98]},
+            {"person":23, "lagerplätze": [8, 9, 27, 32, 42, 45, 59, 60, 74, 81]},
+            {"person":24, "lagerplätze": [2, 10, 13, 17, 37, 38, 46, 51, 67, 85, 91]},
+            {"person":25, "lagerplätze": [2, 21, 30, 50, 58, 59, 69, 75, 78, 93, 95]}
+        ];
+
+        // Füge den Personen Farben hinzu
+        personen_lagerplaetze.forEach((person, index) => {
+            person.farbe = farben[index].rgb;  // RGB-Wert
+            person.farbeName = farben[index].name;  // Farbname
+        });
+
+        // Funktion, die die Suche durchführt
+        function sucheLagerplatz() {
+            const lagerplatzNummer = parseInt(document.getElementById("lagerplatz").value);
+
+            if (isNaN(lagerplatzNummer) || lagerplatzNummer <= 0) {
+                alert("Bitte eine gültige Lagerplatznummer eingeben.");
+                return;
+            }
+
+            // Finde alle Personen, die den angegebenen Lagerplatz besitzen
+            const lagerplatzPersonen = personen_lagerplaetze.filter(person => person.lagerplätze.includes(lagerplatzNummer));
+
+            // Anzahl der Fächer pro Lagerplatz
+            const faecherProLagerplatz = 6;
+
+            // Berechne, wie viele Fächer jede Person erhält
+            const anzahlPersonen = lagerplatzPersonen.length;
+            const faecherProPerson = Math.floor(faecherProLagerplatz / anzahlPersonen);
+
+            // Füge die Ausgabe in das HTML ein
+            const outputDiv = document.getElementById("output");
+            if (lagerplatzPersonen.length === 0) {
+                outputDiv.innerHTML = `<p>Keine Personen gefunden, die Lagerplatz ${lagerplatzNummer} besitzen.</p>`;
+            } else {
+                outputDiv.innerHTML = `<p>Es gibt ${lagerplatzPersonen.length} Person(en), die Lagerplatz ${lagerplatzNummer} teilen.<br> </p>`;
+
+                // Erstelle die Liste der Personen und deren Farben sowie die Anzahl der Fächer (LEDs)
+                lagerplatzPersonen.forEach(person => {
+                    outputDiv.innerHTML += `<p>Person ${person.person} | Farbe: ${person.farbeName} | Anzahl der LEDs: ${faecherProPerson}</p>`;
+
+                    // Erstelle grafische Darstellung der Fächer
+                    const fachContainer = document.createElement("div");
+                    fachContainer.className = "fach-container";
+
+                    for (let i = 0; i < faecherProPerson; i++) {
+                        const fach = document.createElement("div");
+                        fach.className = "fach";
+                        fach.style.backgroundColor = person.farbe;  // RGB-Wert wird verwendet
+                        fachContainer.appendChild(fach);
+                    }
+
+                    outputDiv.appendChild(fachContainer);
+                });
+            }
+        }
+
+        // Event Listener für den Button
+        document.getElementById("sucheButton").addEventListener("click", sucheLagerplatz);
+    </script>
+</body>
 </html>
