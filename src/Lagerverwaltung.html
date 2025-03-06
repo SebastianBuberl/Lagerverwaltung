@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lagerplatz LED Ausgabe</title>
+    <style>
+        .fach-container {
+            display: flex;  
+            justify-content: flex-start;
+            gap: 5px;
+            margin: 10px 0;
+        }
+
+        .fach {
+            font-size: 20px;
+            display: flex;  
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            gap: 12px;
+            border: 1.5px solid #000;
+            margin-left: 20px;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-shadow: 
+            -1px -1px 0px #000,
+             0px -1px 0px #000,
+             1px -1px 0px #000,
+            -1px  0px 0px #000,
+             1px  0px 0px #000,
+            -1px  1px 0px #000,
+             0px  1px 0px #000,
+             1px  1px 0px #000;
+        }
+
+        .output-container {
+        padding-top: 20px;
+        display: flex; /* Stellt sicher, dass die Ausgabe in einer eigenen Zeile ist */
+        }
+
+        .fach-container {
+            display: flex;  
+            gap: 5px;
+            margin-bottom: 20px; /* Abstand nach der Grafik */
+        }
+
+        .personen-liste {
+            list-style-type: none;
+            padding-left: 20px;
+            margin-top: 8px;
+        }
+
+        .personen-liste li {
+            margin: 5px 0;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Suche nach LEDs auf einem Lagerplatz</h1>
+   
+    <!-- Input für das Hochladen der JSON-Datei -->
+    <input type="file" id="fileInput" accept=".json" /> <br><br>
+
+    <!--Lagerplatz Auswahl -->
+    <label for="lagerplatz">Lagerplatz Nummer:</label>
+    <input type="number" id="lagerplatz" placeholder="Lagerplatznummer eingeben" min="1" max="100" value="1" />   
+    <button id="sucheButton">Suchen</button>
+
+    <!-- Output für Aufgabe 1|2-->
+    <div id="output" class="output-container"></div>
+
+    <!-- Button für Aufgabe 3-->
+    <button id="lagerplaetzeButton">Lagerplätze mit 6 oder weniger Personen</button>
+    <div id="lagerplaetzeOutput"></div>   
+    <script>
+        // Initialisierung für PersonalDaten
+        let personalDaten = []; 
+
+        // Event-Listener für die Datei-Auswahl
+        document.getElementById("fileInput").addEventListener("change", function(event) {
+            const file = event.target.files[0];
+            if (file && file.name.endsWith('.json')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        // JSON-Datei parsen und in personalDaten speichern
+                        personalDaten = JSON.parse(e.target.result);
+                        alert("JSON-Datei erfolgreich geladen!");
+                    } catch (error) {
+                        alert("Fehler beim Verarbeiten der JSON-Datei.");
+                    }
+                };
+                reader.readAsText(file);
+            } else {
+                alert("Bitte eine gültige JSON-Datei hochladen.");
+            }
+        });
+    
+        // Liste von Farben
+        const farben = [
+            {"name": "Rot", "rgb": "rgb(255, 0, 0)"},
+            {"name": "Blau", "rgb": "rgb(0, 0, 255)"},
+            {"name": "Grün", "rgb": "rgb(0, 255, 0)"},
+            {"name": "Gelb", "rgb": "rgb(255, 255, 0)"},
+            {"name": "Orange", "rgb": "rgb(255, 165, 0)"},
+            {"name": "Lila", "rgb": "rgb(128, 0, 128)"},
+            {"name": "Türkis", "rgb": "rgb(64, 224, 208)"},
+            {"name": "Pink", "rgb": "rgb(255, 105, 180)"},
+            {"name": "Braun", "rgb": "rgb(165, 42, 42)"},
+            {"name": "Grau", "rgb": "rgb(128, 128, 128)"},
+            {"name": "Hellgrün", "rgb": "rgb(144, 238, 144)"},
+            {"name": "Dunkelblau", "rgb": "rgb(0, 0, 139)"},
+            {"name": "Violett", "rgb": "rgb(238, 130, 238)"},
+            {"name": "Hellblau", "rgb": "rgb(173, 216, 230)"},
+            {"name": "Beige", "rgb": "rgb(245, 245, 220)"},
+            {"name": "Dunkelrot", "rgb": "rgb(139, 0, 0)"},
+            {"name": "Hellbraun", "rgb": "rgb(205, 133, 63)"},
+            {"name": "Hellgelb", "rgb": "rgb(255, 255, 102)"},
+            {"name": "Magenta", "rgb": "rgb(255, 0, 255)"},
+            {"name": "Dunkelgrün", "rgb": "rgb(0, 100, 0)"},
+            {"name": "Cyan", "rgb": "rgb(0, 255, 255)"},
+            {"name": "Zinnober", "rgb": "rgb(227, 66, 52)"},
+            {"name": "Mintgrün", "rgb": "rgb(189, 252, 201)"},
+            {"name": "Blaugrün", "rgb": "rgb(0, 128, 128)"},
+            {"name": "Pfirsich", "rgb": "rgb(255, 218, 185)"}
+        ];
+    
+        // Funktion, die Farben zu den Personen hinzufügt
+        function addColorsToData() {
+            // Jeder Person wird eine Farbe aus der Liste zugewiesen
+            personalDaten.forEach((person, index) => {
+                person.farbe = farben[index] ? farben[index].rgb : "rgb(0,0,0)";
+                person.farbeName = farben[index] ? farben[index].name : "Unbekannt";
+            });
+        }
+    
+        // Funktion, die die Suche durchführt
+        function sucheLagerplatz() {
+            // Lagerplatznummer aus dem Input-Feld lesen
+            const lagerplatzAuswahl = parseInt(document.getElementById("lagerplatz").value);
+
+            // Überprüfen, ob die Lagerplatznummer gültig ist
+            if (isNaN(lagerplatzAuswahl) || lagerplatzAuswahl <= 0) {
+                alert("Bitte einen gültigen Lagerplatz eingeben.");
+                return;
+            }
+
+            // Personen finden, die den ausgewählten Lagerplatz besitzen
+            const lagerplatzPersonen = personalDaten.filter(person => person.lagerplätze.includes(lagerplatzAuswahl));
+            const anzahlPersonen = lagerplatzPersonen.length;
+
+            // Wenn keine Personen gefunden wurden, eine Meldung anzeigen
+            if (anzahlPersonen === 0) {
+                document.getElementById("output").innerHTML = `<p>Keine Personen gefunden, die Lagerplatz ${lagerplatzAuswahl} besitzen.</p>`;
+                return;
+            }
+
+            // Anzahl der LEDs pro Person berechnen
+            const faecherProLagerplatz = 6;
+            const ledsProPerson = Math.floor(faecherProLagerplatz / anzahlPersonen);
+            const restLEDs = faecherProLagerplatz % anzahlPersonen;
+
+            // Array für die Lagerplatz-LEDs erstellen
+            const lagerplatzArray = [];
+
+            // Für jede Person die LEDs erstellen
+            for (let i = 0; i < anzahlPersonen; i++) {
+                const person = lagerplatzPersonen[i];
+                const ledsForThisPerson = ledsProPerson + (i < restLEDs ? 1 : 0);
+
+                // Für jede LED ein Objekt erstellen und zum Array hinzufügen
+                for (let j = 0; j < ledsForThisPerson; j++) {
+                    lagerplatzArray.push({
+                        person: person.person,
+                        farbe: person.farbe,
+                        rgb: person.farbe,
+                    });
+                }
+            }
+
+            // Ausgabe erstellen
+            const outputDiv = document.getElementById("output");
+            outputDiv.innerHTML = `<p>Es gibt ${anzahlPersonen} Person(en), die Lagerplatz ${lagerplatzAuswahl} teilen.</p>`;
+
+            // Container für die LEDs erstellen
+            const fachContainer = document.createElement("div");
+            fachContainer.classList.add("fach-container");
+
+            // LEDs zum Container hinzufügen
+            lagerplatzArray.forEach(personen => {
+                const fach = document.createElement("div");
+                fach.classList.add("fach");
+                fach.style.backgroundColor = personen.rgb;
+                fach.textContent = personen.person;
+                fachContainer.appendChild(fach);
+            });
+
+            // Container zur Ausgabe hinzufügen
+            outputDiv.appendChild(fachContainer);
+
+            // Liste der Personen erstellen
+            const personenListe = document.createElement("ul");
+            personenListe.classList.add("personen-liste");
+
+            // Personen sortieren und zur Liste hinzufügen
+            lagerplatzPersonen.sort((a, b) => a.person - b.person);
+
+            lagerplatzPersonen.forEach(person => {
+                const listItem = document.createElement("li");
+                const anzahlLEDs = lagerplatzArray.filter(fach => fach.person === person.person).length;
+                listItem.textContent = `Person ${person.person} | Farbe: ${person.farbeName} | LEDs: ${anzahlLEDs}`;
+                personenListe.appendChild(listItem);
+            });
+
+            // Liste zur Ausgabe hinzufügen
+            outputDiv.appendChild(personenListe);
+        }
+    
+        // Funktion, die die Anzahl der Lagerplätze ausgibt, an denen 6 oder weniger Personen zugeordnet sind
+        function lagerplaetzeMitSechsOderWenigerPersonen() {
+            // Letzte Person aus der Liste lesen
+            const letztePerson = personalDaten[personalDaten.length - 1];
+            const lagerplaetze = letztePerson.lagerplätze;
+
+            // Liste für die Lagerplätze erstellen
+            const lagerplaetzeListe = [];
+
+            // Für jeden Lagerplatz die Anzahl der Personen berechnen
+            lagerplaetze.forEach(lagerplatz => {
+                const lagerplatzPersonen = personalDaten.filter(person => person.lagerplätze.includes(lagerplatz));
+                const anzahlPersonen = lagerplatzPersonen.length;
+
+                // Wenn die Anzahl der Personen 6 oder weniger beträgt, den Lagerplatz zur Liste hinzufügen
+                if (anzahlPersonen <= 6) {
+                    lagerplaetzeListe.push({
+                        lagerplatz: lagerplatz,
+                        anzahlPersonen: anzahlPersonen,
+                        farbe: letztePerson.farbeName
+                    });
+                }
+            });
+
+            // Ausgabe erstellen
+            const outputDiv = document.getElementById("lagerplaetzeOutput");
+            outputDiv.innerHTML = "";
+
+            // Wenn Lagerplätze gefunden wurden, eine Liste erstellen
+            if (lagerplaetzeListe.length > 0) {
+                outputDiv.innerHTML += `<h2>Lagerplätze der letzten Person mit 6 oder weniger Personen</h2>`;
+                outputDiv.innerHTML += `<p>Lagerplatzanzahl: ${lagerplaetzeListe.length}</p>`;
+
+                const liste = document.createElement("ul");
+
+                lagerplaetzeListe.forEach(lagerplatz => {
+                    const listItem = document.createElement("li");
+                    listItem.textContent = `Lagerplatz ${lagerplatz.lagerplatz}: ${lagerplatz.anzahlPersonen} Person(en), Farbe: ${lagerplatz.farbe}`;
+                    liste.appendChild(listItem);
+                });
+
+                outputDiv.appendChild(liste);
+            } else {
+                outputDiv.innerHTML += `<p>Keine Lagerplätze der letzten Person mit 6 oder weniger Personen gefunden.</p>`;
+            }
+        }
+    
+        // Event Listener für die Buttons
+        document.getElementById("sucheButton").addEventListener("click", function() {
+            // Wenn PersonalDaten vorhanden sind, die Suche durchführen
+            if (personalDaten.length > 0) {
+                addColorsToData();
+                sucheLagerplatz();
+            } else {
+                alert("Bitte laden Sie eine gültige JSON-Datei hoch.");
+            }
+        });
+
+        document.getElementById("lagerplaetzeButton").addEventListener("click", function() {
+            // Wenn PersonalDaten vorhanden sind, die Lagerplätze mit 6 oder weniger Personen anzeigen
+            if (personalDaten.length > 0) {
+                addColorsToData();
+                lagerplaetzeMitSechsOderWenigerPersonen();
+            } else {
+                alert("Bitte laden Sie eine gültige JSON-Datei hoch.");
+            }
+        });
+        
+    </script>
+</body>
+</html>
